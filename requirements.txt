@@ -1,0 +1,4 @@
+qrcode~=8.0
+cryptography~=44.0.2
+gmssl~=3.2.2
+mariadb~=1.1.12
