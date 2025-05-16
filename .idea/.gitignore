@@ -2,8 +2,9 @@
 /shelf/
 /workspace.xml
 
-# pyc
+# python
 *.pyc
+__pycache__
 
 # Log
 *.log
