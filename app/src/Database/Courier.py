@@ -64,28 +64,6 @@ class MariaDBCourier:
         """获取游标对象"""
         return self.connection.cursor()
 
-    def create_database(self, db_name: str, charset: str = 'utf8mb4',
-                        collation: str = 'utf8mb4_general_ci') -> bool:
-        """
-        创建数据库
-
-        :param db_name: 数据库名称
-        :param charset: 字符集(默认utf8mb4)
-        :param collation: 排序规则
-        :return: 是否创建成功
-        """
-        try:
-            self.cursor.execute(
-                f"CREATE DATABASE IF NOT EXISTS `{db_name}` "
-                f"CHARACTER SET '{charset}' COLLATE '{collation}';"
-            )
-            self.connection.commit()
-            print(f"Database '{db_name}' created successfully")
-            return True
-        except mariadb.Error as e:
-            print(f"Failed to create database: {e}")
-            self.connection.rollback()
-            return False
 
     def execute_query(self, query: str, params: Optional[tuple] = None,
                       fetch_all: bool = True) -> Union[List[tuple], int, None]:
@@ -178,8 +156,6 @@ db_config = {
 if __name__ == '__main__':
     # 使用上下文管理器自动管理连接
     with MariaDBCourier(db_config) as courier:
-
-        courier.create_database('project_vault')
 
         # 初始化表结构
         courier.initialize_vault_tables()

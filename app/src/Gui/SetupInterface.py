@@ -1,18 +1,17 @@
-import os
 import sys
 import re
-
-from PySide6 import QtCore
-from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QHBoxLayout,
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QGridLayout,
                                QLineEdit, QLabel, QPushButton, QTextEdit,
-                               QMessageBox, QGridLayout)
-from PySide6.QtGui import QClipboard, QColor, QPalette
-from PySide6.QtCore import Qt
+                               QMessageBox, QGroupBox, QCheckBox)
+from PySide6.QtGui import QColor, QPalette, QClipboard
+from PySide6.QtCore import Qt, Signal
+import mariadb
 
+import Log.SetupLogger
 
-# os.environ["QT_WAYLAND_SHELL_INTEGRATION"] = "kde-shell"  # 强制 KDE 集成
 
 class DatabaseSetupWindow(QMainWindow):
+    operation_complete = Signal(bool, str)  # 操作结果信号
 
     # MariaDB系统保留用户名列表
     RESERVED_USERNAMES = [
@@ -25,109 +24,115 @@ class DatabaseSetupWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("数据库设置向导")
-        self.setFixedSize(600, 500)  # 调整窗口高度
+        self.setWindowTitle("数据库自动初始化工具")
+        self.setFixedSize(800, 600)
 
-        # 主部件和网格布局
+        # 主布局
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         layout = QGridLayout(main_widget)
 
-        # 设置列宽比例（重要！）
-        layout.setColumnStretch(0, 1)
-        layout.setColumnStretch(1, 3)  # 输入框列占3份宽度
-        layout.setColumnStretch(2, 1)  # 强度标签列占1份
+        # 步骤1：Root认证
+        root_group = QGroupBox("步骤1: Root认证")
+        root_layout = QGridLayout(root_group)
+        self.root_host = QLineEdit("localhost")
+        self.root_port = QLineEdit("3306")
+        self.root_user = QLineEdit("root")
+        self.root_password = QLineEdit()
+        self.root_password.setEchoMode(QLineEdit.Password)
+        self.root_connect_btn = QPushButton("连接")
+        self.root_connect_btn.clicked.connect(self.connect_root)
 
-        # 用户名输入（第0行）
-        self.username_label = QLabel("用户名:")
-        self.username_input = QLineEdit()
-        layout.addWidget(self.username_label, 0, 0)
-        layout.addWidget(self.username_input, 0, 1, 1, 2)  # 跨列1-2
+        root_layout.addWidget(QLabel("主机:"), 0, 0)
+        root_layout.addWidget(self.root_host, 0, 1)
+        root_layout.addWidget(QLabel("端口:"), 1, 0)
+        root_layout.addWidget(self.root_port, 1, 1)
+        root_layout.addWidget(QLabel("用户:"), 2, 0)
+        root_layout.addWidget(self.root_user, 2, 1)
+        root_layout.addWidget(QLabel("密码:"), 3, 0)
+        root_layout.addWidget(self.root_password, 3, 1)
+        root_layout.addWidget(self.root_connect_btn, 4, 1)
+        layout.addWidget(root_group, 0, 0, 1, 2)
 
-        # 密码输入（第1行）
-        self.password_label = QLabel("密码:")
-        self.password_input = QLineEdit()
-        self.password_input.setEchoMode(QLineEdit.Password)
-        layout.addWidget(self.password_label, 1, 0)
-        layout.addWidget(self.password_input, 1, 1, 1, 2)  # 跨列1-2
+        # 步骤2：创建配置
+        config_group = QGroupBox("步骤2: 创建新用户和数据库")
+        config_layout = QGridLayout(config_group)
 
-        # 确认密码输入（第2行）
-        self.confirm_password_label = QLabel("确认密码:")
-        self.confirm_password_input = QLineEdit()
-        self.confirm_password_input.setEchoMode(QLineEdit.Password)
-        layout.addWidget(self.confirm_password_label, 2, 0)
-        layout.addWidget(self.confirm_password_input, 2, 1, 1, 2)  # 跨列1-2
-
-        # 密码强度提示（第3行）
+        # 新用户配置
+        self.new_user = QLineEdit()
+        self.new_password = QLineEdit()
+        self.new_password.setEchoMode(QLineEdit.Password)
+        self.confirm_password = QLineEdit()
+        self.confirm_password.setEchoMode(QLineEdit.Password)
         self.password_strength = QLabel("密码强度: ")
-        layout.addWidget(self.password_strength, 3, 0, 1, 3)  # 全宽显示
 
-        # 生成SQL按钮（第4行）
-        self.generate_sql_button = QPushButton("生成SQL")
-        self.generate_sql_button.clicked.connect(self.generate_sql)
-        layout.addWidget(self.generate_sql_button, 4, 0, 1, 3)  # 全宽
-
-        # SQL显示框（第5行）
-        self.sql_output = QTextEdit()
-        self.sql_output.setReadOnly(True)
-        layout.addWidget(self.sql_output, 5, 0, 3, 3)  # 跨3列，占3行高度
-
-        # 按钮区域（第8行）
-        button_container = QWidget()
-        button_layout = QHBoxLayout(button_container)
-        button_layout.addStretch()
-
-        # 复制按钮
-        self.copy_button = QPushButton("复制 SQL")
-        self.copy_button.clicked.connect(self.copy_sql_output)
-        button_layout.addWidget(self.copy_button)
-
-        # 下一步按钮
-        self.next_button = QPushButton("下一步")
-        button_layout.addWidget(self.next_button)
-
-        layout.addWidget(button_container, 8, 0, 1, 3)
-
-        self.statusBar().showMessage("就绪")
-
-        # 实时密码强度检查
-        self.password_input.textChanged.connect(self.check_password_strength)
+        self.new_password.textChanged.connect(self.check_password_strength)
         self.update_strength_label("弱", QColor(255, 0, 0))
 
+        config_layout.addWidget(QLabel("新用户名:"), 0, 0)
+        config_layout.addWidget(self.new_user, 0, 1)
+        config_layout.addWidget(QLabel("密码:"), 1, 0)
+        config_layout.addWidget(self.new_password, 1, 1)
+        config_layout.addWidget(QLabel("确认密码:"), 2, 0)
+        config_layout.addWidget(self.confirm_password, 2, 1)
+        config_layout.addWidget(self.password_strength, 2, 2)
+        layout.addWidget(config_group, 1, 0, 1, 2)
 
-    def validate_inputs(self):
-        """集中验证所有输入"""
+        # 步骤3：执行
+        self.execute_btn = QPushButton("执行初始化")
+        self.execute_btn.clicked.connect(self.execute_initialization)
+        self.execute_btn.setEnabled(False)
+        layout.addWidget(self.execute_btn, 2, 1)
+
+        # 状态显示
+        self.status_output = QTextEdit()
+        self.status_output.setReadOnly(True)
+        layout.addWidget(self.status_output, 3, 0, 1, 2)
+
+        # 连接状态
+        self.root_conn = None
+        self.operation_complete.connect(self.handle_result)
+
+    def connect_root(self):
+        """连接root账户"""
+        try:
+            conn = mariadb.connect(
+                user=self.root_user.text().strip(),
+                password=self.root_password.text(),
+                host=self.root_host.text().strip(),
+                port=int(self.root_port.text()),
+                database=None
+            )
+            self.root_conn = conn
+            self.status_output.append("√ 成功连接到MariaDB服务器")
+            self.execute_btn.setEnabled(True)
+        except mariadb.Error as e:
+            self.show_error(f"连接失败: {str(e)}")
+            self.root_conn = None
+            self.execute_btn.setEnabled(False)
+
+    def validate_config(self):
+        """验证新用户配置"""
         errors = []
-
-        # 获取输入值
-        username = self.username_input.text().strip()
-        password = self.password_input.text().strip()
-        confirm_password = self.confirm_password_input.text().strip()
+        user = self.new_user.text().strip()
+        pwd = self.new_password.text()
+        confirm = self.confirm_password.text()
 
         # 保留用户名检查
-        if username in self.RESERVED_USERNAMES:
-            errors.append(f"'{username}'是系统保留用户名，请输入合法用户名")
+        if user in self.RESERVED_USERNAMES:
+            errors.append(f"'{user}'是系统保留用户名，请输入合法用户名")
 
-        # 非空检查
-        if not username:
+        if not user:
             errors.append("用户名不能为空")
-        if not password:
+        if not pwd:
             errors.append("密码不能为空")
-        if not confirm_password:
-            errors.append("确认密码不能为空")
-
-        # 如果存在空值直接返回
-        if errors:
-            return errors
-
-        # 密码一致性检查
-        if password != confirm_password:
+        if pwd != confirm:
             errors.append("两次输入的密码不一致")
 
         # ASCII字符检查
-        if not re.match(r'^[\x00-\x7F]+$', username):
+        if not re.match(r'^[\x00-\x7F]+$', user):
             errors.append("用户名包含非ASCII字符")
-        if not re.match(r'^[\x00-\x7F]+$', password):
+        if not re.match(r'^[\x00-\x7F]+$', pwd):
             errors.append("密码包含非ASCII字符")
 
         return errors
@@ -168,50 +173,56 @@ class DatabaseSetupWindow(QMainWindow):
         self.password_strength.setPalette(palette)
         self.password_strength.setText(f"密码强度: {text}")
 
-    def generate_sql(self):
-        """生成SQL代码"""
-        # 执行集中验证
-        errors = self.validate_inputs()
+    def execute_initialization(self):
+        """执行初始化操作"""
+        if not self.root_conn:
+            self.show_error("未连接到数据库")
+            return
 
+        # 验证输入
+        errors = self.validate_config()
         if errors:
-            self.show_combined_warning(errors)
-            return None
+            self.show_error("\n".join(errors))
+            return
 
-        # 获取有效输入
-        username = self.username_input.text().strip()
-        password = self.password_input.text().strip()
+        try:
+            cursor = self.root_conn.cursor()
+            user = self.new_user.text().strip()
+            pwd = self.new_password.text()
 
-        # 生成SQL
-        sql = f"-- 创建用户\n"
-        sql += f"CREATE USER '{username}'@'localhost' IDENTIFIED BY '{password}';\n\n"
-        sql += f"-- 创建数据库\n"
-        sql += "CREATE DATABASE IF NOT EXISTS project_vault\n"
-        sql += "  CHARACTER SET utf8mb4\n"
-        sql += "  COLLATE utf8mb4_unicode_ci;\n\n"
-        sql += f"-- 授予权限\n"
-        sql += f"GRANT ALL PRIVILEGES ON project_vault.* TO '{username}'@'localhost';\n\n"
-        sql += "FLUSH PRIVILEGES;"
+            # 创建数据库
+            self.status_output.append("▶ 创建数据库 project_vault...")
+            cursor.execute("CREATE DATABASE IF NOT EXISTS project_vault "
+                           "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+            Log.SetupLogger.plain_log("▶ 创建数据库 project_vault...")
 
-        self.sql_output.setPlainText(sql)
+            # 创建用户
+            self.status_output.append(f"▶ 创建用户 {user}...")
+            cursor.execute(f"CREATE USER IF NOT EXISTS ?@'localhost' IDENTIFIED BY ?",
+                           (user, pwd))
 
-    # 修改复制方法
-    @QtCore.Slot()
-    def copy_sql_output(self):
-        clipboard = QApplication.clipboard()
-        sql_text = self.sql_output.toPlainText()
+            # 授予权限
+            privileges = "ALL PRIVILEGES"
+            self.status_output.append(f"▶ 授予 {privileges} 权限...")
+            cursor.execute(f"GRANT {privileges} ON project_vault.* TO ?@'localhost'", (user,))
 
-        if sql_text:
-            clipboard.setText(sql_text)
-            self.statusBar().showMessage("SQL已复制到剪贴板", 3000)  # 显示3秒
+            self.root_conn.commit()
+            self.operation_complete.emit(True, "初始化成功完成！")
+
+        except mariadb.Error as e:
+            self.root_conn.rollback()
+            self.operation_complete.emit(False, f"操作失败: {str(e)}")
+
+    def handle_result(self, success, message):
+        """处理操作结果"""
+        if success:
+            self.status_output.append(f"✓ {message}")
+            QMessageBox.information(self, "成功", message)
         else:
-            self.statusBar().showMessage("错误：没有可复制的SQL内容", 5000)
+            self.status_output.append(f"✗ {message}")
+            QMessageBox.critical(self, "错误", message)
 
-    def show_combined_warning(self, messages):
-        """显示合并的警告消息"""
-        msg_box = QMessageBox()
-        msg_box.setIcon(QMessageBox.Warning)
-        msg_box.setWindowTitle("输入验证错误")
-        msg_box.setText("以下问题需要修正：")
-        msg_box.setInformativeText("\n• " + "\n• ".join(messages))
-        msg_box.exec()
+    def show_error(self, message):
+        """显示错误"""
+        QMessageBox.critical(self, "输入错误", message)
 
