@@ -30,5 +30,7 @@ if __name__ == '__main__':
 
     developer_info()
 
-    # Core.Controller.WindowManager.Login()
-    Core.Controller.WindowManager.Main()
+    Core.Controller.WindowManager.init_app()
+    Core.Controller.WindowManager.show_login()
+    Core.Controller.WindowManager._app.exec()
+    # Core.Controller.WindowManager.Main()

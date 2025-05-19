@@ -4,15 +4,15 @@
 import cryptography
 import gmssl
 
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes
 
 class AESSolution:
 
     def AES_encryption(self):
         pass
 
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives import hashes
 
     # 密码
     password = b"password"

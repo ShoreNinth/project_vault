@@ -27,36 +27,38 @@ def hasInitialized():
     return data['General'][0]['IsInitialized']
 
 
+# Core/Controller/WindowManager.py
+from PySide6 import QtWidgets
+
+
 class WindowManager:
-    # 使用类变量保存 app 实例
-    app = None
+    _app = None
+    _current_window = None
 
     @classmethod
-    def Login(cls):
-        if not cls.app:
-            cls.app = Gui.HomeInterface.QtWidgets.QApplication([])
-
-        widget = Gui.HomeInterface.LoginWindow()
-        widget.resize(480, 360)
-        widget.show()
-        cls.app.exec()
+    def init_app(cls):
+        if not cls._app:
+            cls._app = QtWidgets.QApplication([])
 
     @classmethod
-    def Main(cls):
-        if not cls.app:
-            cls.app = Gui.HomeInterface.QtWidgets.QApplication([])
-
-        widget = Gui.HomeInterface.MainWindow()
-        widget.resize(800, 600)
-        widget.show()
-        cls.app.exec()
+    def show_login(cls):
+        cls._switch_window(Gui.HomeInterface.LoginWindow, 480, 360)
 
     @classmethod
-    def Setup(cls):
-        if not cls.app:
-            cls.app = Gui.SetupInterface.QApplication([])
+    def show_setup(cls):
+        cls._switch_window(Gui.SetupInterface.DatabaseSetupWindow, 800, 600)
 
-        widget = Gui.SetupInterface.DatabaseSetupWindow()
-        widget.resize(800, 600)
-        widget.show()
-        cls.app.exec()
+    @classmethod
+    def show_register(cls):
+        cls._switch_window(Gui.HomeInterface.RegistrationWindow, 480, 360)
+
+    @classmethod
+    def _switch_window(cls, window_class, width, height):
+        if cls._current_window:
+            cls._current_window.close()
+            cls._current_window.deleteLater()
+
+        cls.init_app()
+        cls._current_window = window_class()
+        cls._current_window.resize(width, height)
+        cls._current_window.show()

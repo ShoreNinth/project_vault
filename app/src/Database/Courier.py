@@ -40,9 +40,9 @@ class MariaDBCourier:
         if self._conn is None:
             try:
                 self._conn = mariadb.connect(**self._config)
-                Log.DatabaseLogger.info("Successfully connected to MariaDB")
+                Log.DatabaseLogger.info_log("Successfully connected to MariaDB")
             except mariadb.Error as e:
-                Log.DatabaseLogger.error(f"Error connecting to MariaDB: {e}")
+                Log.DatabaseLogger.error_log(f"Error connecting to MariaDB: {e}")
                 sys.exit(1)
 
     @property
@@ -75,7 +75,7 @@ class MariaDBCourier:
             else:
                 return self.cursor.rowcount
         except mariadb.Error as e:
-            Log.DatabaseLogger.error(f"Error executing query: {e}")
+            Log.DatabaseLogger.error_log(f"Error executing query: {e}")
             return None
 
     def create_table(self, table_name: str, schema: str) -> bool:
@@ -90,10 +90,10 @@ class MariaDBCourier:
             self.cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({schema})")
             self.connection.commit()
 
-            Log.DatabaseLogger.info(f"Table {table_name} created")
+            Log.DatabaseLogger.info_log(f"Table {table_name} created")
             return True
         except mariadb.Error as e:
-            Log.DatabaseLogger.error(f"Error creating table: {e}")
+            Log.DatabaseLogger.error_log(f"Error creating table: {e}")
             self.connection.rollback()
             return False
 
@@ -102,7 +102,7 @@ class MariaDBCourier:
         if self._conn is not None:
             self._conn.close()
             self._conn = None
-            Log.DatabaseLogger.info("Successfully closed MariaDB")
+            Log.DatabaseLogger.info_log("Successfully closed MariaDB")
 
     # 示例方法: 创建项目所需的表
     def initialize_vault_tables(self) -> bool:

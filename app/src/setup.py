@@ -55,5 +55,6 @@ if __name__ == '__main__':
     FolderMkdir.log_folder_mkdir()
     FileGeneration.config_generation()
 
-    Core.Controller.WindowManager.Setup()
-
+    Core.Controller.WindowManager.init_app()
+    Core.Controller.WindowManager.show_setup()
+    Core.Controller.WindowManager._app.exec()
