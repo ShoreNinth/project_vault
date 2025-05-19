@@ -1,9 +1,12 @@
-import time
+import logging
+
+logger = logging.getLogger("SetupLogger")
+logger.setLevel(level=logging.INFO)
+
+handler = logging.FileHandler("./log/db.log")
+handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
-def login_logger():
-    try:
-        with open('./log/login', 'rw') as db_log:
-            data = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-    except FileNotFoundError:
-        print('file not found')

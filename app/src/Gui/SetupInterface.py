@@ -200,18 +200,22 @@ class DatabaseSetupWindow(QMainWindow):
             self.status_output.append(f"▶ 创建用户 {user}...")
             cursor.execute(f"CREATE USER IF NOT EXISTS ?@'localhost' IDENTIFIED BY ?",
                            (user, pwd))
+            Log.SetupLogger.plain_log(f"▶ 创建用户 {user}...")
 
             # 授予权限
             privileges = "ALL PRIVILEGES"
             self.status_output.append(f"▶ 授予 {privileges} 权限...")
             cursor.execute(f"GRANT {privileges} ON project_vault.* TO ?@'localhost'", (user,))
+            Log.SetupLogger.plain_log(f"▶ 授予 {privileges} 权限...")
 
             self.root_conn.commit()
             self.operation_complete.emit(True, "初始化成功完成！")
+            Log.SetupLogger.plain_log("初始化成功完成！")
 
         except mariadb.Error as e:
             self.root_conn.rollback()
             self.operation_complete.emit(False, f"操作失败: {str(e)}")
+            Log.SetupLogger.error_log(f"操作失败: {str(e)}")
 
     def handle_result(self, success, message):
         """处理操作结果"""

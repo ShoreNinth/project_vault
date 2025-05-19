@@ -39,3 +39,13 @@ def makefile_success(file):
 def makefile_failure(file, reason):
     logger.error(file+"makefile failure! "+reason)
 
+"""
+Transcript
+"""
+
+def plain_log(text):
+    logger.info(text)
+
+def error_log(text):
+    logger.error(text)
+
