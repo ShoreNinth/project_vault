@@ -6,3 +6,4 @@
 /app/src/Log/__pycache__
 /log
 log/setup.log
+*.log
