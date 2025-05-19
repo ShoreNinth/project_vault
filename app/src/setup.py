@@ -22,6 +22,16 @@ class FolderMkdir():
         except PermissionError:
             Log.SetupLogger.mkdir_failure("Log Folder", "Permission_denied")
 
+    def key_folder_mkdir():
+        '''创建密钥文件夹'''
+        try:
+            if not os.path.exists(f'{CWD}/key'):
+                os.mkdir('key')
+                Log.SetupLogger.mkdir_success("Key Folder")
+            else:
+                Log.SetupLogger.mkdir_skipped("Key Folder")
+        except PermissionError:
+            Log.SetupLogger.mkdir_failure("Key Folder", "Permission_denied")
 
     def config_folder_mkdir():
         '''创建配置文件夹'''
@@ -53,6 +63,7 @@ if __name__ == '__main__':
 
     FolderMkdir.config_folder_mkdir()
     FolderMkdir.log_folder_mkdir()
+    FolderMkdir.key_folder_mkdir()
     FileGeneration.config_generation()
 
     Core.Controller.WindowManager.init_app()

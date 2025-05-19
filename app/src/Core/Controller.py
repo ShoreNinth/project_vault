@@ -53,6 +53,10 @@ class WindowManager:
         cls._switch_window(Gui.HomeInterface.RegistrationWindow, 480, 360)
 
     @classmethod
+    def show_main(cls):
+        cls._switch_window(Gui.HomeInterface.MainWindow, 800, 600)
+
+    @classmethod
     def _switch_window(cls, window_class, width, height):
         if cls._current_window:
             cls._current_window.close()

@@ -57,26 +57,89 @@ class MariaDBCourier:
         """获取游标对象"""
         return self.connection.cursor()
 
-
     def execute_query(self, query: str, params: Optional[tuple] = None,
                       fetch_all: bool = True) -> Union[List[tuple], int, None]:
         """
-        执行SQL查询
+        执行SQL查询（增强版）
 
         :param query: SQL语句
-        :param params: 参数元组
+        :param params: 参数元组，支持列表自动转换
         :param fetch_all: 是否获取所有结果
-        :return: 查询结果或影响的行数
+        :return: 查询结果或影响的行数，出错返回None
         """
         try:
-            self.cursor.execute(query, params or ())
-            if query.strip().upper().startswith(('SELECT', 'SHOW')):
-                return self.cursor.fetchall() if fetch_all else self.cursor.fetchone()
-            else:
-                return self.cursor.rowcount
+            # # 自动重连机制
+            # if not self._conn or not self._conn.is_connected():
+            #     Log.DatabaseLogger.debug_log("尝试重新连接数据库...")
+            #     self.connect()
+
+            # 参数标准化处理
+            params = self._normalize_params(params)
+
+            # 使用新的游标执行查询
+            with self.connection.cursor() as cursor:
+                Log.DatabaseLogger.info_log(f"Executing: {query}\nParams: {params}")
+
+                cursor.execute(query, params)
+
+                # 根据查询类型处理结果
+                if query.strip().upper().startswith(('SELECT', 'SHOW', 'DESCRIBE')):
+                    result = cursor.fetchall() if fetch_all else cursor.fetchone()
+                    Log.DatabaseLogger.debug_log(f"查询结果: {result}")
+                    return result
+                else:
+                    self.connection.commit()
+                    rowcount = cursor.rowcount
+                    Log.DatabaseLogger.info_log(f"影响行数: {rowcount}")
+                    return rowcount
+
         except mariadb.Error as e:
-            Log.DatabaseLogger.error_log(f"Error executing query: {e}")
+            Log.DatabaseLogger.error_log(
+                f"数据库操作失败\n"
+                f"错误码: {e.errno}\n"
+                f"SQL状态: {e.sqlstate}\n"
+                f"错误信息: {e.msg}\n"
+                f"完整查询: {query}\n"
+                f"参数: {params}"
+            )
+
+            # 处理连接相关错误
+            if e.errno in [1927, 2055]:  # 连接超时/丢失
+                self.close()
+                Log.DatabaseLogger.warning_log("数据库连接已重置")
+
             return None
+
+        except Exception as e:
+            Log.DatabaseLogger.error_log(f"未知错误: {str(e)}")
+            return None
+
+    def _normalize_params(self, params) -> tuple:
+        """参数标准化处理"""
+        if params is None:
+            return ()
+        if isinstance(params, (list, dict)):
+            return tuple(params.values() if isinstance(params, dict) else params)
+        return params
+
+    def reg_new_user(self, username: str, password_hash: str, email: str) -> bool:
+        """注册用户（修正版）"""
+        try:
+            # 使用参数化查询防止SQL注入
+            query = """
+                    INSERT INTO users
+                        (username, password_hash, email)
+                    VALUES (?, ?, ?) \
+                    """
+            self.cursor.execute(query, (username, password_hash, email))
+            self.connection.commit()
+
+            Log.DatabaseLogger.info_log(f"User {username} created")
+            return True
+        except mariadb.Error as e:
+            Log.DatabaseLogger.error_log(f"Error creating user: {str(e)}")
+            self.connection.rollback()
+            return False
 
     def create_table(self, table_name: str, schema: str) -> bool:
         """

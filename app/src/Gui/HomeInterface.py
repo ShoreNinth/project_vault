@@ -1,6 +1,8 @@
 from PySide6 import QtCore, QtWidgets, QtGui, QtDBus
+import hashlib
 import sys
 import re
+import os
 from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit,
     QPushButton, QFormLayout, QVBoxLayout, QMessageBox
@@ -11,6 +13,7 @@ from PySide6.QtCore import QRegularExpression
 
 import Core.Controller
 import Database.Courier
+import Database.Gatekeeper
 
 
 class LoginWindow(QtWidgets.QWidget):
@@ -60,11 +63,42 @@ class LoginWindow(QtWidgets.QWidget):
         # setColumnStretch设置行的拉伸因子
         self.layout.setColumnStretch(1, 1)
 
-
     @QtCore.Slot()
     def login_attempt(self):
-        self.button_login.setText("Please wait")
+        """登录验证流程优化"""
+        identifier = self.username.text().strip()
+        password = self.password.text()
+
+        # 输入验证
+        if not identifier or not password:
+            self.show_error("用户名/邮箱和密码不能为空")
+            return
+
+        # 显示加载状态
         self.button_login.setEnabled(False)
+
+        # 使用线程防止界面冻结
+        login_thread = LoginThread(identifier, password)
+        login_thread.result_signal.connect(self.handle_login_result)
+        login_thread.start()
+
+    def handle_login_result(self, result):
+        """处理登录结果"""
+        self.button_login.setEnabled(True)
+        self.button_login.setText("Login")
+
+        if isinstance(result, Exception):
+            self.show_error(f"登录失败: {str(result)}")
+        elif result:
+            Core.Controller.WindowManager.show_main()
+            self.close()
+        else:
+            self.show_error("用户名/邮箱或密码错误")
+
+    def show_error(self, message):
+        """显示错误提示"""
+        print(message)
+
 
     @QtCore.Slot()
     def recover(self):
@@ -145,6 +179,9 @@ class RegistrationWindow(QtWidgets.QWidget):
         if password and not is_ascii(password):
             errors.append("密码必须为ASCII字符")
 
+        if '@' in username:
+            errors.append(f"'{username}'中不得含有“@”")
+
         # 验证邮箱格式
         if email and not re.match(r'^[\w\.-]+@[\w-]+\.[\w\.-]+$', email):
             errors.append("邮箱格式不正确")
@@ -156,14 +193,30 @@ class RegistrationWindow(QtWidgets.QWidget):
         # 显示结果
         if errors:
             QMessageBox.critical(self, "输入错误", "\n".join(errors))
-        else:
-            QMessageBox.information(self, "注册成功", "用户注册成功！")
-            # 这里可以添加实际注册逻辑
-            print("Username: ", username)
-            print("Email: ", email)
-            print("Password: ", password)
-            print("RepeatPassword: ", repeat_password)
 
+        if not errors:
+            try:
+                # 生成加盐哈希密码
+                salt = os.urandom(32)
+                key = hashlib.pbkdf2_hmac(
+                    'sha256',
+                    password.encode('utf-8'),
+                    salt,
+                    100000
+                )
+                password_hash = f"{salt.hex()}:{key.hex()}"
+
+                # 执行数据库操作
+                with Database.Courier.MariaDBCourier(Database.Gatekeeper.load_config()) as courier:
+                    if courier.reg_new_user(username, password_hash, email):
+                        QMessageBox.information(self, "成功", "注册成功")
+                        self.close()
+                    else:
+                        QMessageBox.critical(self, "错误", "用户名或邮箱已存在")
+            except Exception as e:
+                QMessageBox.critical(self, "系统错误", f"数据库连接失败: {str(e)}")
+
+        Core.Controller.WindowManager.show_login()
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -207,3 +260,69 @@ class AboutWindow(QtWidgets.QMainWindow):
         layout.addWidget(self.button_about_Qt, 0, 0)
 
 
+class LoginThread(QtCore.QThread):
+    result_signal = QtCore.Signal(object)
+
+    def __init__(self, identifier, password):
+        super().__init__()
+        self.identifier = identifier
+        self.password = password
+
+    def run(self):
+
+        try:
+            with Database.Courier.MariaDBCourier(Database.Gatekeeper.load_config()) as courier:
+                # 确定查询字段
+                is_email = "@" in self.identifier
+                field = "email" if is_email else "username"
+
+                # 参数化查询
+                query = f"""
+                    SELECT 
+                        id, 
+                        password_hash,
+                        username 
+                    FROM users 
+                    WHERE {field} = %s
+                """
+
+                # 执行查询
+                user_data = courier.execute_query(
+                    query,
+                    (self.identifier,),
+                    fetch_all=False
+                )
+
+                if not user_data:
+                    print("[AUTH] 用户不存在")
+                    self.result_signal.emit(False)
+                    return
+
+                user_id, stored_hash, username = user_data
+                print(f"[AUTH] 用户 {username} 尝试登录")
+
+                # 密码验证
+                if ":" in stored_hash:  # PBKDF2
+                    salt_hex, key_hex = stored_hash.split(":")
+                    salt = bytes.fromhex(salt_hex)
+
+                    new_key = hashlib.pbkdf2_hmac(
+                        'sha256',
+                        self.password.encode(),
+                        salt,
+                        100000
+                    ).hex()
+
+                    is_valid = (new_key == key_hex)
+                else:  # 兼容旧版SHA256
+                    current_hash = hashlib.sha256(
+                        self.password.encode()
+                    ).hexdigest()
+                    is_valid = (current_hash == stored_hash)
+
+                print(f"[AUTH] 密码验证结果：{is_valid}")
+                self.result_signal.emit(is_valid)
+
+        except Exception as e:
+            print(f"[AUTH 错误] {str(e)}")
+            self.result_signal.emit(e)

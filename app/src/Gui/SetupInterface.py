@@ -10,6 +10,7 @@ import mariadb
 
 from Config.DBConfig import DBConfig
 import Database.Courier
+import Database.Gatekeeper
 import Log.SetupLogger
 
 
@@ -223,15 +224,13 @@ class DatabaseSetupWindow(QMainWindow):
             }
 
             DBConfig.update_config(new_config)
+            # 数据库密码持久化
+            Database.Gatekeeper.save_config(new_config)
 
             with Database.Courier.MariaDBCourier(DBConfig.get_config()) as courier:
 
                 # 初始化表结构
                 courier.initialize_vault_tables()
-
-                # # 执行查询
-                # users = courier.execute_query("SELECT * FROM users")
-                # print("Users:" + str(users))
 
             self.operation_complete.emit(True, "初始化成功完成！")
             Log.SetupLogger.plain_log("初始化成功完成！")
