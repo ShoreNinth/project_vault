@@ -24,14 +24,7 @@ class MariaDBCourier:
             - autocommit: 是否自动提交(默认为False)
         """
         self._conn = None
-        self._config = config or {
-            'user': "shoreninth",
-            'password': "123456",
-            'host': "127.0.0.1",
-            'port': 3306,
-            'database': None,
-            'autocommit': False
-        }
+        self._config = config
 
     def __enter__(self):
         """支持上下文管理器"""
@@ -47,9 +40,9 @@ class MariaDBCourier:
         if self._conn is None:
             try:
                 self._conn = mariadb.connect(**self._config)
-                print("Successfully connected to MariaDB")
+                Log.DatabaseLogger.info("Successfully connected to MariaDB")
             except mariadb.Error as e:
-                print(f"Error connecting to MariaDB: {e}")
+                Log.DatabaseLogger.error(f"Error connecting to MariaDB: {e}")
                 sys.exit(1)
 
     @property
@@ -82,7 +75,7 @@ class MariaDBCourier:
             else:
                 return self.cursor.rowcount
         except mariadb.Error as e:
-            print(f"Query execution failed: {e}")
+            Log.DatabaseLogger.error(f"Error executing query: {e}")
             return None
 
     def create_table(self, table_name: str, schema: str) -> bool:
@@ -96,10 +89,11 @@ class MariaDBCourier:
         try:
             self.cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({schema})")
             self.connection.commit()
-            print(f"Table '{table_name}' created successfully")
+
+            Log.DatabaseLogger.info(f"Table {table_name} created")
             return True
         except mariadb.Error as e:
-            print(f"Failed to create table: {e}")
+            Log.DatabaseLogger.error(f"Error creating table: {e}")
             self.connection.rollback()
             return False
 
@@ -108,7 +102,7 @@ class MariaDBCourier:
         if self._conn is not None:
             self._conn.close()
             self._conn = None
-            print("Database connection closed")
+            Log.DatabaseLogger.info("Successfully closed MariaDB")
 
     # 示例方法: 创建项目所需的表
     def initialize_vault_tables(self) -> bool:
@@ -142,24 +136,3 @@ class MariaDBCourier:
 
         return success
 
-
-# 配置数据库连接
-db_config = {
-    'user': 'vault_courier',
-    'password': '123456',  # 应从安全配置读取
-    'host': '127.0.0.1',
-    'port': 3306,
-    'database': 'project_vault'
-}
-
-
-if __name__ == '__main__':
-    # 使用上下文管理器自动管理连接
-    with MariaDBCourier(db_config) as courier:
-
-        # 初始化表结构
-        courier.initialize_vault_tables()
-
-        # 执行查询
-        users = courier.execute_query("SELECT * FROM users")
-        print("hhh"+str(users))

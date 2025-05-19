@@ -2,7 +2,9 @@
 import Core.Controller
 import Config.Locale
 import Gui.HomeInterface
+import Log.DevelopLogger
 import Log.SetupLogger
+
 
 import sys
 import os
@@ -17,15 +19,16 @@ def config_folder_detection():
     else:
         exit('Cannot_find_config')
 
+def developer_info():
+    Log.DevelopLogger.developer_info('Initialized: '+Core.Controller.hasInitialized())
+    Log.DevelopLogger.developer_info('User locale is '+Config.Locale.GetSystemLang.get_lang())
+    Log.DevelopLogger.developer_info('User language is '+Config.Locale.load_locale(Config.Locale.GetSystemLang.get_lang()))
 
 if __name__ == '__main__':
 
-
     config_folder_detection()
-    print("\n")
-    # print(Core.Controller.hasInitialized())
-    print('User locale is '+Config.Locale.GetSystemLang.get_lang())
-    print('User language is '+Config.Locale.load_locale(Config.Locale.GetSystemLang.get_lang()))
+
+    developer_info()
 
     # Core.Controller.WindowManager.Login()
     Core.Controller.WindowManager.Main()

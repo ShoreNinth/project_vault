@@ -7,6 +7,9 @@ from PySide6.QtGui import QColor, QPalette, QClipboard
 from PySide6.QtCore import Qt, Signal
 import mariadb
 
+
+from Config.DBConfig import DBConfig
+import Database.Courier
 import Log.SetupLogger
 
 
@@ -209,6 +212,27 @@ class DatabaseSetupWindow(QMainWindow):
             Log.SetupLogger.plain_log(f"▶ 授予 {privileges} 权限...")
 
             self.root_conn.commit()
+
+            # 更新全局配置
+            new_config = {
+                'user': user,
+                'password': pwd,
+                'host': self.root_host.text().strip(),
+                'port': int(self.root_port.text()),
+                'database': 'project_vault'
+            }
+
+            DBConfig.update_config(new_config)
+
+            with Database.Courier.MariaDBCourier(DBConfig.get_config()) as courier:
+
+                # 初始化表结构
+                courier.initialize_vault_tables()
+
+                # # 执行查询
+                # users = courier.execute_query("SELECT * FROM users")
+                # print("Users:" + str(users))
+
             self.operation_complete.emit(True, "初始化成功完成！")
             Log.SetupLogger.plain_log("初始化成功完成！")
 
