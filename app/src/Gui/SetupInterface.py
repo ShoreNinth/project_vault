@@ -1,11 +1,10 @@
-import sys
+import mariadb
 import re
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QGridLayout,
                                QLineEdit, QLabel, QPushButton, QTextEdit,
                                QMessageBox, QGroupBox, QCheckBox)
 from PySide6.QtGui import QColor, QPalette, QClipboard
 from PySide6.QtCore import Qt, Signal
-import mariadb
 
 
 from Config.DBConfig import DBConfig

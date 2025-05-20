@@ -1,8 +1,8 @@
-from PySide6 import QtCore, QtWidgets, QtGui, QtDBus
 import hashlib
-import sys
 import re
 import os
+
+from PySide6 import QtCore, QtWidgets, QtGui, QtDBus
 from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit,
     QPushButton, QFormLayout, QVBoxLayout, QMessageBox
@@ -10,10 +10,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QRegularExpressionValidator
 from PySide6.QtCore import QRegularExpression
 
-
 import Core.Controller
 import Database.Courier
 import Database.Gatekeeper
+import Log.LoginLogger
 
 
 class LoginWindow(QtWidgets.QWidget):
@@ -54,7 +54,7 @@ class LoginWindow(QtWidgets.QWidget):
         self.layout.addWidget(self.password_label, 3, 0)
         self.layout.addWidget(self.button_login, 4, 1)
         self.layout.addWidget(self.button_register, 4, 2)
-        self.layout.addWidget(self.recovery_label, 5, 0)
+        self.layout.addWidget(self.recovery_label, 5, 1)
         self.layout.addWidget(self.recovery_button, 5, 2)
 
         # 设置组件的拉伸因子，用于放缩窗口时，组件等比例放大或者缩小
@@ -294,12 +294,12 @@ class LoginThread(QtCore.QThread):
                 )
 
                 if not user_data:
-                    print("[AUTH] 用户不存在")
+                    Log.LoginLogger.error_log("[AUTH] 用户不存在")
                     self.result_signal.emit(False)
                     return
 
                 user_id, stored_hash, username = user_data
-                print(f"[AUTH] 用户 {username} 尝试登录")
+
 
                 # 密码验证
                 if ":" in stored_hash:  # PBKDF2
@@ -320,9 +320,9 @@ class LoginThread(QtCore.QThread):
                     ).hexdigest()
                     is_valid = (current_hash == stored_hash)
 
-                print(f"[AUTH] 密码验证结果：{is_valid}")
+                Log.LoginLogger.info_log(f"[AUTH] 用户 {username} 尝试登录，密码验证结果：{is_valid}")
                 self.result_signal.emit(is_valid)
 
         except Exception as e:
-            print(f"[AUTH 错误] {str(e)}")
+            Log.LoginLogger.error_log(f"[AUTH 错误] {str(e)}")
             self.result_signal.emit(e)

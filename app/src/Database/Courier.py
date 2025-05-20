@@ -3,6 +3,7 @@
 
 import mariadb
 import sys
+
 from typing import Optional, Union, List, Dict, Any
 
 import Log.DatabaseLogger

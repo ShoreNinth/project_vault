@@ -1,15 +1,9 @@
+import os
 
 import Core.Controller
 import Config.Locale
-import Gui.HomeInterface
 import Log.DevelopLogger
 import Log.SetupLogger
-
-
-import sys
-import os
-
-# os.environ["QT_WAYLAND_SHELL_INTEGRATION"] = "kde-shell"  # 强制 KDE 集成
 
 
  
@@ -33,4 +27,4 @@ if __name__ == '__main__':
     Core.Controller.WindowManager.init_app()
     Core.Controller.WindowManager.show_login()
     Core.Controller.WindowManager._app.exec()
-    # Core.Controller.WindowManager.Main()
+
