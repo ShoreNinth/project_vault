@@ -1,7 +1,8 @@
 
 import json
-from cryptography.fernet import Fernet
 import os
+
+from cryptography.fernet import Fernet
 
 CWD = os.getcwd()
 

@@ -7,12 +7,6 @@
 # 管理用户会话（登录态、权限验证）。
 
 import json
-import os
-import sys
-
-
-# sys.path.append(os.path.abspath('../Gui'))
-
 
 import Gui.HomeInterface
 import Gui.SetupInterface
@@ -27,7 +21,6 @@ def hasInitialized():
     return data['General'][0]['IsInitialized']
 
 
-# Core/Controller/WindowManager.py
 from PySide6 import QtWidgets
 
 
