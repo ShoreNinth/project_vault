@@ -9,3 +9,4 @@ log/setup.log
 *.log
 /config/db_config.enc
 /key
+.archive
