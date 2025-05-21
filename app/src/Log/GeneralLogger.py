@@ -13,9 +13,9 @@ logger.addHandler(handler)
 Transcript
 """
 
-def general_info(text):
+def general_info_log(text):
     logger.info(text)
 
-def general_error(text):
+def general_error_log(text):
     logger.error(text)
 

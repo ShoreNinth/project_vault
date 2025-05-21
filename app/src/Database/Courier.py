@@ -1,5 +1,5 @@
 # MariaDB Courier
-# MariaDB 信使
+# MariaDB 信使模块，负责与数据库通信
 
 import mariadb
 import sys
@@ -41,9 +41,9 @@ class MariaDBCourier:
         if self._conn is None:
             try:
                 self._conn = mariadb.connect(**self._config)
-                Log.DatabaseLogger.info_log("Successfully connected to MariaDB")
+                Log.DatabaseLogger.db_info_log("Successfully connected to MariaDB")
             except mariadb.Error as e:
-                Log.DatabaseLogger.error_log(f"Error connecting to MariaDB: {e}")
+                Log.DatabaseLogger.db_error_log(f"Error connecting to MariaDB: {e}")
                 sys.exit(1)
 
     @property
@@ -69,33 +69,29 @@ class MariaDBCourier:
         :return: 查询结果或影响的行数，出错返回None
         """
         try:
-            # # 自动重连机制
-            # if not self._conn or not self._conn.is_connected():
-            #     Log.DatabaseLogger.debug_log("尝试重新连接数据库...")
-            #     self.connect()
 
             # 参数标准化处理
             params = self._normalize_params(params)
 
             # 使用新的游标执行查询
             with self.connection.cursor() as cursor:
-                Log.DatabaseLogger.info_log(f"Executing: {query}\nParams: {params}")
+                Log.DatabaseLogger.db_info_log(f"Executing: {query}\nParams: {params}")
 
                 cursor.execute(query, params)
 
                 # 根据查询类型处理结果
                 if query.strip().upper().startswith(('SELECT', 'SHOW', 'DESCRIBE')):
                     result = cursor.fetchall() if fetch_all else cursor.fetchone()
-                    Log.DatabaseLogger.debug_log(f"查询结果: {result}")
+                    Log.DatabaseLogger.db_debug_log(f"查询结果: {result}")
                     return result
                 else:
                     self.connection.commit()
                     rowcount = cursor.rowcount
-                    Log.DatabaseLogger.info_log(f"影响行数: {rowcount}")
+                    Log.DatabaseLogger.db_info_log(f"影响行数: {rowcount}")
                     return rowcount
 
         except mariadb.Error as e:
-            Log.DatabaseLogger.error_log(
+            Log.DatabaseLogger.db_error_log(
                 f"数据库操作失败\n"
                 f"错误码: {e.errno}\n"
                 f"SQL状态: {e.sqlstate}\n"
@@ -107,12 +103,12 @@ class MariaDBCourier:
             # 处理连接相关错误
             if e.errno in [1927, 2055]:  # 连接超时/丢失
                 self.close()
-                Log.DatabaseLogger.warning_log("数据库连接已重置")
+                Log.DatabaseLogger.db_warning_log("数据库连接已重置")
 
             return None
 
         except Exception as e:
-            Log.DatabaseLogger.error_log(f"未知错误: {str(e)}")
+            Log.DatabaseLogger.db_error_log(f"未知错误: {str(e)}")
             return None
 
     def _normalize_params(self, params) -> tuple:
@@ -135,10 +131,10 @@ class MariaDBCourier:
             self.cursor.execute(query, (username, password_hash, email))
             self.connection.commit()
 
-            Log.DatabaseLogger.info_log(f"User {username} created")
+            Log.DatabaseLogger.db_info_log(f"User {username} created")
             return True
         except mariadb.Error as e:
-            Log.DatabaseLogger.error_log(f"Error creating user: {str(e)}")
+            Log.DatabaseLogger.db_error_log(f"Error creating user: {str(e)}")
             self.connection.rollback()
             return False
 
@@ -154,10 +150,10 @@ class MariaDBCourier:
             self.cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} ({schema})")
             self.connection.commit()
 
-            Log.DatabaseLogger.info_log(f"Table {table_name} created")
+            Log.DatabaseLogger.db_info_log(f"Table {table_name} created")
             return True
         except mariadb.Error as e:
-            Log.DatabaseLogger.error_log(f"Error creating table: {e}")
+            Log.DatabaseLogger.db_error_log(f"Error creating table: {e}")
             self.connection.rollback()
             return False
 
@@ -166,7 +162,7 @@ class MariaDBCourier:
         if self._conn is not None:
             self._conn.close()
             self._conn = None
-            Log.DatabaseLogger.info_log("Successfully closed MariaDB")
+            Log.DatabaseLogger.db_info_log("Successfully closed MariaDB")
 
     # 示例方法: 创建项目所需的表
     def initialize_vault_tables(self) -> bool:

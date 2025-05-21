@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+# 门卫模块，负责看守保险箱的钥匙
 
 import os
 import shutil

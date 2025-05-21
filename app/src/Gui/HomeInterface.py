@@ -95,9 +95,10 @@ class LoginWindow(QtWidgets.QWidget):
         else:
             self.show_error("用户名/邮箱或密码错误")
 
+
     def show_error(self, message):
         """显示错误提示"""
-        print(message)
+        Log.LoginLogger.login_error_log(message)
 
 
     @QtCore.Slot()
@@ -294,7 +295,7 @@ class LoginThread(QtCore.QThread):
                 )
 
                 if not user_data:
-                    Log.LoginLogger.error_log("[AUTH] 用户不存在")
+                    Log.LoginLogger.login_error_log("[AUTH] 用户不存在")
                     self.result_signal.emit(False)
                     return
 
@@ -320,9 +321,9 @@ class LoginThread(QtCore.QThread):
                     ).hexdigest()
                     is_valid = (current_hash == stored_hash)
 
-                Log.LoginLogger.info_log(f"[AUTH] 用户 {username} 尝试登录，密码验证结果：{is_valid}")
+                Log.LoginLogger.login_info_log(f"[AUTH] 用户 {username} 尝试登录，密码验证结果：{is_valid}")
                 self.result_signal.emit(is_valid)
 
         except Exception as e:
-            Log.LoginLogger.error_log(f"[AUTH 错误] {str(e)}")
+            Log.LoginLogger.login_error_log(f"[AUTH 错误] {str(e)}")
             self.result_signal.emit(e)

@@ -14,14 +14,14 @@ logger.addHandler(handler)
 Transcript
 """
 
-def info_log(text):
+def db_info_log(text):
     logger.info(text)
 
-def error_log(text):
+def db_error_log(text):
     logger.error(text)
 
-def debug_log(text):
+def db_debug_log(text):
     logger.debug(text)
 
-def warning_log(text):
+def db_warning_log(text):
     logger.warning(text)

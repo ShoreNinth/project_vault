@@ -20,14 +20,14 @@ def start_setup():
 Mkdir
 """
 
-def mkdir_success(dir):
-    logger.info(dir+"mkdir success!")
+def mkdir_success(dir_name):
+    logger.info(dir_name + "mkdir success!")
 
-def mkdir_failure(dir, reason):
-    logger.error(dir+"mkdir failure! "+reason)
+def mkdir_failure(dir_name, reason):
+    logger.error(dir_name + "mkdir failure! " + reason)
 
-def mkdir_skipped(dir):
-    logger.info(dir+"mkdir skipped.")
+def mkdir_skipped(dir_name):
+    logger.info(dir_name + "mkdir skipped.")
 
 """
 Makefile
@@ -43,9 +43,9 @@ def makefile_failure(file, reason):
 Transcript
 """
 
-def plain_log(text):
+def setup_info_log(text):
     logger.info(text)
 
-def error_log(text):
+def setup_error_log(text):
     logger.error(text)
 
