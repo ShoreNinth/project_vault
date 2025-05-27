@@ -1,0 +1,18 @@
+@startuml
+|普通用户|
+start
+:注册开始;
+:输入用户名、邮箱、密码;
+if (验证通过?) then (是)
+  :请求数据库密钥;
+  if (注册成功?) then (是)
+    stop
+  else (否)
+    :记录失败日志;
+  endif
+else (否)
+  :记录失败日志;
+  stop
+endif
+stop
+@enduml
