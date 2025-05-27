@@ -27,7 +27,7 @@ class DatabaseSetupWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("数据库自动初始化工具")
+        self.setWindowTitle("数据库初始化")
         self.setFixedSize(800, 600)
 
         # 主布局
