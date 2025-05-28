@@ -5,12 +5,20 @@ import os
 from PySide6 import QtCore, QtWidgets, QtGui, QtDBus
 from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit,
-    QPushButton, QFormLayout, QVBoxLayout, QMessageBox
+    QPushButton, QFormLayout, QVBoxLayout, QMessageBox, QFileDialog, QRadioButton, QCheckBox, QComboBox
 )
 from PySide6.QtGui import QRegularExpressionValidator
 from PySide6.QtCore import QRegularExpression
 
+import sys
+from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
+                               QLabel, QPushButton, QListWidget, QListWidgetItem, QLineEdit,
+                               QStackedWidget, QFrame, QScrollArea)
+from PySide6.QtGui import QIcon, QPixmap, QFont, QColor, QPalette
+from PySide6.QtCore import Qt, QSize, Signal, QTimer
+
 import Core.Controller
+import Core.FileDigester
 import Database.Courier
 import Database.Gatekeeper
 import Log.LoginLogger
@@ -20,42 +28,52 @@ class LoginWindow(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
 
-        self.text = QtWidgets.QLabel("Hello", alignment=QtCore.Qt.AlignCenter)
+        self.text = QtWidgets.QLabel("欢迎回来！", alignment=QtCore.Qt.AlignCenter)
+
+        self.server_domain_label=QtWidgets.QLabel("服务器地址")
+        self.server_domain = QtWidgets.QLineEdit("localhost")
+        self.server_port_label = QtWidgets.QLabel("服务器端口")
+        self.server_port = QtWidgets.QLineEdit("3306")
 
         # 用户名输入框
         self.username = QtWidgets.QLineEdit(self)
-        self.username.setPlaceholderText("Username")
-        self.username_label = QtWidgets.QLabel("username")
+        self.username.setPlaceholderText("用户名/邮箱")
+        self.username_label = QtWidgets.QLabel("用户名/邮箱")
 
         # 密码输入框，允许一键清除、隐藏字符
         self.password = QtWidgets.QLineEdit(self)
         self.password.setClearButtonEnabled(True)
         self.password.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
-        self.password.setPlaceholderText("Password")
-        self.password_label = QtWidgets.QLabel("password")
+        self.password.setPlaceholderText("密码")
+        self.password_label = QtWidgets.QLabel("密码")
 
-        self.button_login = QtWidgets.QPushButton("Login")
+        self.button_login = QtWidgets.QPushButton("登录")
         self.button_login.setShortcut("Enter")
         self.button_login.clicked.connect(self.login_attempt)
 
-        self.button_register = QtWidgets.QPushButton("Register")
+        self.button_register = QtWidgets.QPushButton("注册")
         self.button_register.clicked.connect(self.register)
 
-        self.recovery_label = QtWidgets.QLabel("Recovery Mode")
-        self.recovery_button = QtWidgets.QPushButton("Recover")
+        self.recovery_label = QtWidgets.QLabel("分片丢失？进入恢复模式")
+        self.recovery_button = QtWidgets.QPushButton("恢复模式")
         self.recovery_button.clicked.connect(self.recover)
 
 
         self.layout = QtWidgets.QGridLayout(self)
         self.layout.addWidget(self.text, 0, 0, 1, 3)
-        self.layout.addWidget(self.username, 2, 1, 1 ,2)
-        self.layout.addWidget(self.username_label, 2, 0)
-        self.layout.addWidget(self.password, 3, 1, 1, 2)
-        self.layout.addWidget(self.password_label, 3, 0)
-        self.layout.addWidget(self.button_login, 4, 1)
-        self.layout.addWidget(self.button_register, 4, 2)
-        self.layout.addWidget(self.recovery_label, 5, 1)
-        self.layout.addWidget(self.recovery_button, 5, 2)
+        self.layout.addWidget(self.server_domain, 2, 1, 1 ,2)
+        self.layout.addWidget(self.server_domain_label, 2, 0)
+        self.layout.addWidget(self.server_port, 3, 1, 1,2)
+        self.layout.addWidget(self.server_port_label, 3, 0)
+        self.layout.addWidget(self.username, 4, 1, 1 ,2)
+        self.layout.addWidget(self.username_label, 4, 0)
+        self.layout.addWidget(self.password, 5, 1, 1, 2)
+        self.layout.addWidget(self.password_label, 5, 0)
+        self.layout.addWidget(self.button_login, 6, 1)
+        self.layout.addWidget(self.button_register, 6, 2)
+        self.layout.addWidget(self.recovery_label, 7, 1)
+        self.layout.addWidget(self.recovery_button, 7, 2)
+
 
         # 设置组件的拉伸因子，用于放缩窗口时，组件等比例放大或者缩小
         # setRowStretch设置行的拉伸因子
@@ -95,6 +113,8 @@ class LoginWindow(QtWidgets.QWidget):
         else:
             self.show_error("用户名/邮箱或密码错误")
 
+        Core.Controller.WindowManager.show_main()
+
 
     def show_error(self, message):
         """显示错误提示"""
@@ -103,7 +123,7 @@ class LoginWindow(QtWidgets.QWidget):
 
     @QtCore.Slot()
     def recover(self):
-        pass
+        Core.Controller.WindowManager.show_recovery()
 
     @QtCore.Slot()
     def register(self):
@@ -131,6 +151,13 @@ class RegistrationWindow(QtWidgets.QWidget):
         self.repeat_password_edit = QLineEdit()
         self.repeat_password_edit.setEchoMode(QLineEdit.Password)
 
+        self.encryption_algorithm = QComboBox()
+        self.encryption_algorithm.addItem("AES-128")
+        self.encryption_algorithm.addItem("AES-192")
+        self.encryption_algorithm.addItem("AES-256")
+        self.encryption_algorithm.addItem("SM4")
+        self.encryption_algorithm.setCurrentIndex(1)
+
         # 设置邮箱格式验证
         email_regex = QRegularExpression(r'^[\w\.-]+@[\w-]+\.[\w\.-]+$')
         email_validator = QRegularExpressionValidator(email_regex)
@@ -146,6 +173,7 @@ class RegistrationWindow(QtWidgets.QWidget):
         form_layout.addRow("邮箱:", self.email_edit)
         form_layout.addRow("密码:", self.password_edit)
         form_layout.addRow("重复密码:", self.repeat_password_edit)
+        form_layout.addRow("加密算法:", self.encryption_algorithm)
 
         main_layout = QVBoxLayout()
         main_layout.addLayout(form_layout)
@@ -212,40 +240,16 @@ class RegistrationWindow(QtWidgets.QWidget):
                     if courier.reg_new_user(username, password_hash, email):
                         QMessageBox.information(self, "成功", "注册成功")
                         self.close()
+                        Core.Controller.WindowManager.show_login()
                     else:
                         QMessageBox.critical(self, "错误", "用户名或邮箱已存在")
             except Exception as e:
                 QMessageBox.critical(self, "系统错误", f"数据库连接失败: {str(e)}")
 
-        Core.Controller.WindowManager.show_login()
 
 
-class MainWindow(QtWidgets.QMainWindow):
-    def __init__(self):
-        super().__init__()
-
-        central_widget = QtWidgets.QWidget()
-        self.setCentralWidget(central_widget)
-
-        layout = QtWidgets.QGridLayout(central_widget)
-
-        # 添加内容
-        self.welcome_text = QtWidgets.QLabel("Welcome back!", alignment=QtCore.Qt.AlignCenter)
-        layout.addWidget(self.welcome_text, 0, 0, 1, 2)
 
 
-        menubar = self.menuBar()
-
-        self.openfile = QtGui.QAction('打开文件')
-        self.openfile.triggered.connect(lambda: print('打开文件'))
-
-        self.closefile = QtGui.QAction('关闭文件')
-        self.closefile.triggered.connect(lambda: print('关闭文件'))
-
-        # 创建并添加菜单
-        fileMenu = menubar.addMenu('文件')
-        fileMenu.addAction(self.openfile)
-        fileMenu.addAction(self.closefile)
 
 
 class AboutWindow(QtWidgets.QMainWindow):

@@ -12,3 +12,4 @@ log/setup.log
 .archive
 /app/src/Security/__pycache__
 /app/src/Storage/__pycache__
+/app/src/Recovery/__pycache__

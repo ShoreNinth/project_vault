@@ -9,19 +9,14 @@
 import json
 
 import Gui.HomeInterface
+import Gui.MainInterface
 import Gui.SetupInterface
+import Recovery.RecoveryInterface
 
 
-def hasInitialized():
-    '''检查程序是否已初始化'''
+from PySide6 import QtWidgets, QtGui
 
-    with open('./test/devConfig.json', 'r') as Config:
-        data = json.load(Config)
-
-    return data['General'][0]['IsInitialized']
-
-
-from PySide6 import QtWidgets
+import Recovery
 
 
 class WindowManager:
@@ -46,8 +41,12 @@ class WindowManager:
         cls._switch_window(Gui.HomeInterface.RegistrationWindow, 480, 360)
 
     @classmethod
+    def show_recovery(cls):
+        cls._switch_window(Recovery.RecoveryInterface.RecoveryUI, 400, 300)
+
+    @classmethod
     def show_main(cls):
-        cls._switch_window(Gui.HomeInterface.MainWindow, 800, 600)
+        cls._switch_window(Gui.MainInterface.MainWindow, 800, 600)
 
     @classmethod
     def _switch_window(cls, window_class, width, height):

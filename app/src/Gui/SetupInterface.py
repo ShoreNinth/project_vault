@@ -2,7 +2,7 @@ import mariadb
 import re
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QGridLayout,
                                QLineEdit, QLabel, QPushButton, QTextEdit,
-                               QMessageBox, QGroupBox, QCheckBox)
+                               QMessageBox, QGroupBox, QCheckBox, QComboBox)
 from PySide6.QtGui import QColor, QPalette, QClipboard
 from PySide6.QtCore import Qt, Signal
 
@@ -46,15 +46,16 @@ class DatabaseSetupWindow(QMainWindow):
         self.root_connect_btn = QPushButton("连接")
         self.root_connect_btn.clicked.connect(self.connect_root)
 
-        root_layout.addWidget(QLabel("主机:"), 0, 0)
-        root_layout.addWidget(self.root_host, 0, 1)
-        root_layout.addWidget(QLabel("端口:"), 1, 0)
-        root_layout.addWidget(self.root_port, 1, 1)
-        root_layout.addWidget(QLabel("用户:"), 2, 0)
-        root_layout.addWidget(self.root_user, 2, 1)
-        root_layout.addWidget(QLabel("密码:"), 3, 0)
-        root_layout.addWidget(self.root_password, 3, 1)
-        root_layout.addWidget(self.root_connect_btn, 4, 1)
+        root_layout.addWidget(QLabel("ℹ️ 请确认您的服务器上的数据库已开启"), 1,0, 1 ,3)
+        root_layout.addWidget(QLabel("主机:"), 2, 0)
+        root_layout.addWidget(self.root_host, 2, 1)
+        root_layout.addWidget(QLabel("端口:"), 3, 0)
+        root_layout.addWidget(self.root_port, 3, 1)
+        root_layout.addWidget(QLabel("用户:"), 4, 0)
+        root_layout.addWidget(self.root_user, 4, 1)
+        root_layout.addWidget(QLabel("密码:"), 5, 0)
+        root_layout.addWidget(self.root_password, 5, 1)
+        root_layout.addWidget(self.root_connect_btn, 6, 1)
         layout.addWidget(root_group, 0, 0, 1, 2)
 
         # 步骤2：创建配置
@@ -72,13 +73,24 @@ class DatabaseSetupWindow(QMainWindow):
         self.new_password.textChanged.connect(self.check_password_strength)
         self.update_strength_label("弱", QColor(255, 0, 0))
 
+        self.encryption_algorithm_label = QLabel("加密算法: ")
+        self.encryption_algorithm = QComboBox()
+        self.encryption_algorithm.addItem("AES")
+        self.encryption_algorithm.addItem("AES-128")
+        self.encryption_algorithm.addItem("AES-192")
+        self.encryption_algorithm.addItem("AES-256")
+        self.encryption_algorithm.addItem("SM4")
+        self.encryption_algorithm.setCurrentIndex(1)
+
         config_layout.addWidget(QLabel("新用户名:"), 0, 0)
         config_layout.addWidget(self.new_user, 0, 1)
         config_layout.addWidget(QLabel("密码:"), 1, 0)
         config_layout.addWidget(self.new_password, 1, 1)
         config_layout.addWidget(QLabel("确认密码:"), 2, 0)
         config_layout.addWidget(self.confirm_password, 2, 1)
+        config_layout.addWidget(QLabel("加密算法:"), 3, 0)
         config_layout.addWidget(self.password_strength, 2, 2)
+        config_layout.addWidget(self.encryption_algorithm, 3, 1)
         layout.addWidget(config_group, 1, 0, 1, 2)
 
         # 步骤3：执行

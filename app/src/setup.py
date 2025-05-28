@@ -45,16 +45,16 @@ class FolderMkdir():
         except PermissionError:
             Log.SetupLogger.mkdir_failure("Config Folder", "Permission_denied")
 
-class FileGeneration():
-
-    def config_generation():
-        '''复制默认配置文件'''
-        try:
-            shutil.copy(f'{CWD}/app/res/default_config.json',f'{CWD}/config/user_conf.json')
-
-            Log.SetupLogger.makefile_success("Config Generated")
-        except PermissionError:
-            Log.SetupLogger.makefile_failure("Config Generated", "Permission_denied")
+# class FileGeneration():
+#
+#     def config_generation():
+#         '''复制默认配置文件'''
+#         try:
+#             shutil.copy(f'{CWD}/app/res/default_config.json',f'{CWD}/config/user_conf.json')
+#
+#             Log.SetupLogger.makefile_success("Config Generated")
+#         except PermissionError:
+#             Log.SetupLogger.makefile_failure("Config Generated", "Permission_denied")
 
 
 
@@ -65,7 +65,6 @@ if __name__ == '__main__':
     FolderMkdir.config_folder_mkdir()
     FolderMkdir.log_folder_mkdir()
     FolderMkdir.key_folder_mkdir()
-    FileGeneration.config_generation()
 
     Core.Controller.WindowManager.init_app()
     Core.Controller.WindowManager.show_setup()
