@@ -19,3 +19,5 @@ def login_info_log(text):
 def login_error_log(text):
     logger.error(text)
 
+def user_key_generation_log(user:str):
+    logger.info(user + "已新建密钥对")

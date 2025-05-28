@@ -27,7 +27,7 @@ def mkdir_failure(dir_name, reason):
     logger.error(dir_name + "mkdir failure! " + reason)
 
 def mkdir_skipped(dir_name):
-    logger.info(dir_name + "mkdir skipped.")
+    logger.info("skipped mkdir: " + dir_name)
 
 """
 Makefile
